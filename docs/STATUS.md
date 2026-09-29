@@ -15,7 +15,7 @@
 - Firebase auth and manual backup/restore code and access rules.
 
 ## Blocked / not complete
-- APK build is blocked during Gradle plugin resolution (`org.gradle.kotlin.kotlin-dsl:6.4.2`). No installable APK has been produced. Native Kotlin code has not completed compilation.
+- Android release preview now builds successfully on GitHub Actions, including native Kotlin compilation and release lint. Local Gradle resolution had previously blocked the build.
 - No physical-device tests, live AI-provider tests, or Firebase deployment. Provider credentials and Firebase configuration are required.
 - Visual screen OCR/AI reasoning, automatic screen actions, Firebase Functions gateway, realtime cloud synchronization, cloud attachment storage, DOCX parsing, and document export remain pending.
 - Web is a functional preview with browser-specific camera/speech/CORS limitations; it does not provide Android screen access.
@@ -30,5 +30,14 @@ Flutter analyze: no issues. All 17 automated tests passed. Web release build suc
 - Provider settings include a real small streaming connection test, separate from saving. It sends no chat history or memory, discloses potential credit usage, and requires text before reporting success.
 - HTTP and streaming errors show bounded structured provider details with the current key and common credential patterns redacted. Authentication, credits, quota, rate limits, and request errors are distinguished.
 - Static analysis passed; all 26 automated tests passed, including nine mocked HTTP tests. No real provider key was supplied or used, so the reported account-specific HTTP 400 is not yet confirmed resolved.
-- The user authorized GitHub upload and APK build on 2026-09-29; remote build results are pending. No key is embedded in source or the web build.
+- The user authorized GitHub upload and APK build on 2026-09-29; remote build succeeded (run 36606847918). No key is embedded in source or the web build.
 - Flutter release web build succeeded for this update.
+
+## Android APK — 2026-09-29
+- Source commit: `dae8a2af570ee3e6af9413f4d5d10b5ec59a6772`.
+- Workflow: https://github.com/booodyb9/Nok-ai/actions/runs/36606847918 — succeeded.
+- 26 tests and static analysis passed on GitHub. Fixed the release lint error by explicitly setting includeSubdomains=false for all three loopback/local domains.
+- APK: ARM64, release optimizations, debug-signed preview; 24.5 MB reported by Flutter.
+- Artifact archive SHA-256: `b8432aea57cca29842122334580389ff4c57db8792478872c0f7d9c59e511f68`.
+- APK SHA-256: `d681a1dda5faaf4f0a0157fa56baae683089f48e8e48135968e927349c64fa35`.
+- Downloaded artifact integrity and APK ZIP contents verified. Installation, voice/camera/accessibility on a physical phone, and live API calls are still unverified.
