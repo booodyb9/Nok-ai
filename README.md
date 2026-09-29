@@ -15,7 +15,7 @@ flutter build apk --release --target-platform android-arm64
 flutter build web
 ```
 
-The preview APK uses debug signing with release optimizations. Configure your own release keystore before distributing through an app store. GitHub Actions builds the Android preview APK on pushes to main. Download NOK-AI-preview-arm64 from the successful workflow run artifacts.
+The preview APK uses debug signing with release optimizations. CI runners generate temporary debug keys, so separate preview builds can have different signatures and cannot necessarily update an existing installation in place. Preserve important data before removing an older installation. Configure your own release keystore before distributing through an app store. GitHub Actions builds the Android preview APK on pushes to main. Download NOK-AI-preview-arm64 from the successful workflow run artifacts.
 
 ## Connect AI
 

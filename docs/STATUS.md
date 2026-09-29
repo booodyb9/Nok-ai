@@ -48,4 +48,9 @@ Flutter analyze: no issues. All 17 automated tests passed. Web release build suc
 - Selection filters chat models and attachment capabilities, caches for ten minutes per provider/endpoint/key, and prefers free OpenRouter candidates when available.
 - Generation retries are bounded to three attempts for temporary server errors. Missing models may fall back; authentication/credits/rate limits do not. Partial responses are never replayed; cancellation stops retries.
 - Local Flutter analysis: no issues. All 43 automated tests passed, including 15 model-discovery/retry tests and two settings UI tests. HTTP calls and platform services in tests are mocked; no live provider key was supplied.
-- Version bumped to 0.1.1+2. Updated Android build pending the workflow for this source commit. Previous build results above refer to 0.1.0, not this update.
+- Version bumped to 0.1.1+2. GitHub Actions run 36645941411 succeeded for source commit d39657685e8572e68e9cfa4ceae97316b6f46416, including analysis, tests and ARM64 release build.
+- Build: https://github.com/booodyb9/Nok-ai/actions/runs/36645941411
+- Artifact 11068767587: archive SHA-256 `facedd7cc39a4f9e64784bbe2eeeabf5eb1ec228655b308b59ff4580c6495c37`.
+- APK: 24,518,537 bytes; SHA-256 `da0a165f9920874f8abf0c0e6ca06fd3cc554519979926c0114b8bed1eed19d8`. Downloaded archive digest and APK contents verified.
+- APK signing-certificate SHA-256: `5ec3d9cae3b3c90eec166652212f5e4378b3a58dea7dc6f68257c4f523a244b2`. This differs from the previous preview signing certificate, so Android will not accept an in-place update over that APK. Preserve needed chats/settings before removing an older installation. Stable production signing remains unconfigured.
+- No physical-device installation or live provider requests were performed for this update.
