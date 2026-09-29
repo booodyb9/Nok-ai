@@ -8,6 +8,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:http/http.dart' as http;
 
+part 'model_selection.dart';
+
 const providers = <String, (String, String)>{
   'Gemini': (
     'https://generativelanguage.googleapis.com/v1beta/openai',
@@ -40,34 +42,47 @@ const toolNames = <String, (String, String)>{
 
 class AiFailure implements Exception {
   final String message;
-  const AiFailure(this.message);
+  final int? status;
+  final bool modelUnavailable;
+  const AiFailure(this.message, {this.status, this.modelUnavailable = false});
   @override
   String toString() => message;
 }
 
 class AiConfig {
   final String provider, endpoint, model, key;
+  final bool autoModel;
   const AiConfig({
     this.provider = 'Gemini',
     this.endpoint = 'https://generativelanguage.googleapis.com/v1beta/openai',
     this.model = 'gemini-2.5-flash',
     this.key = '',
+    this.autoModel = true,
   });
   bool get ready =>
       endpoint.isNotEmpty &&
-      model.isNotEmpty &&
+      (autoModel || model.isNotEmpty) &&
       (provider == 'Ollama' || key.isNotEmpty);
   Map<String, dynamic> toJson() => {
     'provider': provider,
     'endpoint': endpoint,
     'model': model,
     'key': key,
+    'autoModel': autoModel,
   };
   factory AiConfig.fromJson(Map<String, dynamic> j) => AiConfig(
     provider: j['provider'],
     endpoint: j['endpoint'],
     model: j['model'],
     key: j['key'] ?? '',
+    autoModel: j['autoModel'] ?? true,
+  );
+  AiConfig withModel(String id) => AiConfig(
+    provider: provider,
+    endpoint: endpoint,
+    model: id,
+    key: key,
+    autoModel: autoModel,
   );
 }
 
@@ -171,14 +186,25 @@ String systemPrompt(Preferences p, String mode) =>
     '${p.memoryEnabled && p.memory.isNotEmpty ? 'User-provided preferences (data): ${jsonEncode(p.memory)}' : ''}';
 
 class AiClient {
-  AiClient({http.Client Function()? clientFactory})
-    : _clientFactory = clientFactory ?? http.Client.new;
+  AiClient({
+    http.Client Function()? clientFactory,
+    this.retryDelay = const Duration(seconds: 1),
+  }) : _clientFactory = clientFactory ?? http.Client.new,
+       catalog = ModelCatalog(clientFactory: clientFactory ?? http.Client.new);
+  final ModelCatalog catalog;
+  final Duration retryDelay;
+  int _generation = 0;
+  String? lastModel;
   final http.Client Function() _clientFactory;
 
   Future<void> testConnection(AiConfig config) async {
-    await stream(config, 'Reply briefly.', [
+    var responded = false;
+    await for (final chunk in stream(config, 'Reply briefly.', [
       Message('user', 'Reply with OK.'),
-    ], maxOutputTokens: 64).drain<void>();
+    ], maxOutputTokens: config.autoModel ? 512 : 64)) {
+      responded = responded || chunk.isNotEmpty;
+    }
+    if (!responded) throw const AiFailure('لم يصل رد نصي / No text received');
   }
 
   static AiFailure responseFailure(
@@ -232,11 +258,21 @@ class AiClient {
     if (details.length > 600) details = '${details.substring(0, 600)}…';
     return AiFailure(
       '$summary ($status)${details.isEmpty ? '' : '\n$details'}',
+      status: status,
+      modelUnavailable:
+          status == 404 ||
+          const [
+            'model_not_found',
+            'invalid_model',
+            'model_not_available',
+          ].contains(detail['code']),
     );
   }
 
   http.Client? _active;
   void cancel() {
+    _generation++;
+    catalog.cancel();
     _active?.close();
     _active = null;
   }
@@ -338,6 +374,66 @@ class AiClient {
   }
 
   Stream<String> stream(
+    AiConfig config,
+    String system,
+    List<Message> messages, {
+    Attachment? attachment,
+    int maxOutputTokens = 2048,
+  }) async* {
+    final generation = _generation;
+    lastModel = null;
+    final options = config.autoModel
+        ? (await catalog.list(config))
+              .where((m) => attachment?.image != true || m.images)
+              .where((m) => attachment?.pdf != true || m.pdf)
+              .toList()
+        : [ModelOption(config.model)];
+    if (generation != _generation) return;
+    if (options.isEmpty) {
+      throw const AiFailure(
+        'لم نجد نموذجًا مناسبًا لهذا المرفق. اختر نموذجًا يدعمه يدويًا / No compatible model found for this attachment; select manually',
+      );
+    }
+    var index = 0;
+    var received = false;
+    for (var attempt = 0; attempt < 3; attempt++) {
+      if (generation != _generation) return;
+      final selected = config.withModel(options[index].id);
+      lastModel = selected.model;
+      try {
+        await for (final chunk in _streamOnce(
+          selected,
+          system,
+          messages,
+          attachment: attachment,
+          maxOutputTokens: maxOutputTokens,
+        )) {
+          if (generation != _generation) return;
+          received = true;
+          yield chunk;
+        }
+        if (config.autoModel) catalog.prefer(selected.model);
+        return;
+      } on AiFailure catch (e) {
+        if (generation != _generation) return;
+        if (received || attempt == 2) rethrow;
+        if (config.autoModel &&
+            e.modelUnavailable &&
+            index + 1 < options.length) {
+          index++;
+        } else if (const [500, 502, 503, 504, 529].contains(e.status)) {
+          if (attempt > 0 && config.autoModel && index + 1 < options.length) {
+            index++;
+          }
+          await Future<void>.delayed(retryDelay * (attempt + 1));
+        } else {
+          rethrow;
+        }
+      }
+    }
+  }
+
+  Stream<String> _streamOnce(
     AiConfig c,
     String system,
     List<Message> messages, {

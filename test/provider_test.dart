@@ -6,6 +6,7 @@ import 'package:http/testing.dart';
 import 'package:nok_ai/engine.dart';
 
 const config = AiConfig(
+  autoModel: false,
   provider: 'OpenAI',
   endpoint: 'https://api.openai.com/v1',
   model: 'gpt-4.1-mini',
@@ -48,7 +49,11 @@ void main() {
       final base = providers[provider]!.$1;
       expect(
         AiClient.requestUri(
-          AiConfig(provider: provider, endpoint: '$base/chat/completions/'),
+          AiConfig(
+            autoModel: false,
+            provider: provider,
+            endpoint: '$base/chat/completions/',
+          ),
         ).toString(),
         '$base/chat/completions',
       );
@@ -67,6 +72,7 @@ void main() {
       await expectLater(
         ai.testConnection(
           const AiConfig(
+            autoModel: false,
             provider: 'OpenAI',
             endpoint: 'https://example.com/v1',
             model: 'gpt-4.1-mini',
@@ -146,6 +152,7 @@ void main() {
     );
     await ai.testConnection(
       AiConfig(
+        autoModel: false,
         provider: 'OpenRouter',
         endpoint: provider.$1,
         model: provider.$2,
@@ -166,6 +173,7 @@ void main() {
     await expectLater(
       client(200, reply).testConnection(
         const AiConfig(
+          autoModel: false,
           provider: 'OpenAI',
           endpoint: 'https://api.openai.com/v1',
           model: 'gpt-4.1-mini',

@@ -1,4 +1,4 @@
-# NOK AI — 0.1.0 preview
+# NOK AI — 0.1.1 preview
 
 Arabic/English Flutter Android app, built directly in Work. The robot is integrated into the home background. Android package: `app.nok.nok_ai`, minimum Android 8 (API 26).
 
@@ -19,7 +19,11 @@ The preview APK uses debug signing with release optimizations. Configure your ow
 
 ## Connect AI
 
-Open Settings → AI provider. Choose Gemini, OpenAI, Claude, Qwen, DeepSeek, OpenRouter, Ollama, or Azure OpenAI. Enter a valid model, API key, and endpoint. Models shown are editable examples, not a guarantee of account access. Android stores the key in Flutter Secure Storage. Web keys remain in memory for the session and provider CORS policies may block web requests. This is a personal BYOK build, not a hosted service with a shared secret embedded in the app.
+Open Settings → AI provider. Choose Gemini, OpenAI, Claude, Qwen, DeepSeek, OpenRouter, Ollama, or Azure OpenAI. Enter your API key and endpoint. Automatic model selection is enabled by default, including for existing configurations: Save or Test connection discovers current chat models from the provider catalog. Refresh automatic selection bypasses the ten-minute in-memory cache. Turn off automatic selection to enter a model manually. Catalog visibility is not a guarantee of account access or credits. Android stores the key in Flutter Secure Storage. Web keys remain in memory for the session and provider CORS policies may block web requests. This is a personal BYOK build, not a hosted service with a shared secret embedded in the app.
+
+Discovery supports Gemini and Claude native model catalogs, OpenAI-compatible catalogs for OpenAI, Qwen, DeepSeek and installed Ollama models, and OpenRouter's account-filtered catalog. Azure extracts the deployment name from the full deployment URL; a key alone cannot supply that URL. Catalogs blocked by regional API support or account permissions require manual selection. OpenRouter prefers free candidates when present and never falls back from that free list to paid models. Image/PDF filtering uses provider metadata and model-family hints; manual selection remains available for unrecognized models and Azure attachment capabilities.
+
+Temporary generation failures (500/502/503/504/529) receive at most three attempts with bounded backoff, with an alternative model on the final automatic attempt if available. A missing model can trigger an immediate alternative. Authentication, credit and rate-limit failures do not trigger model switching; partial responses are never replayed. Discovery errors are shown without fabricated fallback names. A successful catalog fetch is distinct from a successful connection test, which requires a text response. Provider outages and account billing issues cannot be resolved by model selection alone.
 
 Photos and text attachments are sent only when a request is submitted. PDF works through compatible OpenAI/Claude/OpenRouter vision models; other PDF routes are explicitly rejected. DOC/DOCX parsing is not implemented. Past attachment bytes are not persisted. Web search opens a real browser; it does not fabricate in-app search results.
 

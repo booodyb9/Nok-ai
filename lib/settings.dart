@@ -259,8 +259,8 @@ class SettingsPage extends ConsumerWidget {
         heading('حول NOK', 'About NOK'),
         Text(
           s.tr(
-            'الإصدار 0.1.0 · نسخة أولية\nالطلبات والمرفقات تُرسل إلى مزودك المختار. المحادثات محفوظة على الجهاز، والنسخة السحابية اختيارية.',
-            'Version 0.1.0 · Early build\nRequests and attachments go to your chosen provider. Chats are stored on-device; cloud backup is optional.',
+            'الإصدار 0.1.1 · نسخة أولية\nالطلبات والمرفقات تُرسل إلى مزودك المختار. المحادثات محفوظة على الجهاز، والنسخة السحابية اختيارية.',
+            'Version 0.1.1 · Early build\nRequests and attachments go to your chosen provider. Chats are stored on-device; cloud backup is optional.',
           ),
           style: const TextStyle(fontSize: 13),
         ),
@@ -271,7 +271,8 @@ class SettingsPage extends ConsumerWidget {
 }
 
 class ProviderPage extends ConsumerStatefulWidget {
-  const ProviderPage({super.key});
+  const ProviderPage({super.key, this.client});
+  final AiClient? client;
   @override
   ConsumerState<ProviderPage> createState() => _ProviderPageState();
 }
@@ -279,13 +280,16 @@ class ProviderPage extends ConsumerStatefulWidget {
 class _ProviderPageState extends ConsumerState<ProviderPage> {
   late String provider;
   late final TextEditingController key, model, endpoint;
-  bool reveal = false, busy = false;
+  bool reveal = false, busy = false, automatic = true;
+  List<ModelOption> availableModels = [];
   String? error, connectionResult;
-  final connection = AiClient();
+  late final AiClient connection;
   @override
   void initState() {
     super.initState();
     final c = ref.read(appProvider).config;
+    connection = widget.client ?? AiClient();
+    automatic = c.autoModel;
     provider = c.provider;
     key = TextEditingController(text: c.key);
     model = TextEditingController(
@@ -310,12 +314,65 @@ class _ProviderPageState extends ConsumerState<ProviderPage> {
     endpoint: endpoint.text.trim(),
     model: model.text.trim(),
     key: key.text.trim(),
+    autoModel: automatic,
   );
 
   void clearResult(String _) => setState(() {
     error = null;
     connectionResult = null;
+    availableModels = [];
   });
+
+  Future<AiConfig> resolveSelection() async {
+    final c = currentConfig();
+    if (!automatic) return c;
+    final models = await connection.catalog.list(c);
+    if (!mounted) throw const AiFailure('تم الإلغاء / Cancelled');
+    setState(() {
+      availableModels = models;
+      model.text = models.first.id;
+    });
+    return currentConfig();
+  }
+
+  Future<void> refreshModels() async {
+    if (busy) return;
+    setState(() {
+      busy = true;
+      error = null;
+      connectionResult = null;
+    });
+    try {
+      final models = await connection.catalog.list(
+        currentConfig(),
+        refresh: true,
+      );
+      if (mounted) {
+        setState(() {
+          availableModels = models;
+          model.text = models.first.id;
+          connectionResult = ref
+              .read(appProvider)
+              .tr(
+                'تم اختيار ${model.text}. اختبر الاتصال للتأكد من استجابته.',
+                'Selected ${model.text}. Test the connection to verify it responds.',
+              );
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(
+          () => error = e is AiFailure
+              ? e.message
+              : 'تعذر جلب النماذج؛ يمكنك الاختيار يدويًا / Could not discover models; manual selection is available',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => busy = false);
+      }
+    }
+  }
 
   Future<void> testConnection() async {
     if (busy) return;
@@ -325,14 +382,18 @@ class _ProviderPageState extends ConsumerState<ProviderPage> {
       connectionResult = null;
     });
     try {
-      await connection.testConnection(currentConfig());
+      final c = await resolveSelection();
+      await connection.testConnection(c);
+      if (mounted && connection.lastModel != null) {
+        model.text = connection.lastModel!;
+      }
       if (mounted) {
         setState(
           () => connectionResult = ref
               .read(appProvider)
               .tr(
-                'نجح الاتصال ووصل رد من النموذج. اضغط حفظ لاستخدامه.',
-                'The model responded successfully. Save to use these settings.',
+                'نجح الاتصال بالنموذج ${model.text}. اضغط حفظ لاستخدامه.',
+                'Model ${model.text} responded successfully. Save to use these settings.',
               ),
         );
       }
@@ -385,6 +446,7 @@ class _ProviderPageState extends ConsumerState<ProviderPage> {
                     if (v == null) return;
                     setState(() {
                       provider = v;
+                      availableModels = [];
                       endpoint.text = providers[v]!.$1;
                       model.text = providers[v]!.$2;
                       key.clear();
@@ -416,17 +478,75 @@ class _ProviderPageState extends ConsumerState<ProviderPage> {
             ),
           ),
           const SizedBox(height: 16),
+          SwitchListTile.adaptive(
+            contentPadding: EdgeInsets.zero,
+            title: Text(
+              s.tr('اختيار النموذج تلقائيًا', 'Automatic model selection'),
+            ),
+            subtitle: Text(
+              s.tr(
+                'يجلب نماذج المزود عند الحفظ أو اختبار الاتصال.',
+                'Discovers provider models when saving or testing.',
+              ),
+            ),
+            value: automatic,
+            onChanged: busy
+                ? null
+                : (value) => setState(() {
+                    automatic = value;
+                    error = null;
+                    connectionResult = null;
+                  }),
+          ),
+          if (automatic)
+            OutlinedButton.icon(
+              onPressed: busy ? null : refreshModels,
+              icon: const Icon(Icons.auto_awesome),
+              label: Text(
+                s.tr('تحديث النموذج تلقائيًا', 'Refresh automatic selection'),
+              ),
+            ),
+          if (!automatic && availableModels.isNotEmpty)
+            DropdownButtonFormField<String>(
+              isExpanded: true,
+              decoration: InputDecoration(
+                labelText: s.tr('النماذج المكتشفة', 'Discovered models'),
+              ),
+              items: availableModels
+                  .map(
+                    (m) => DropdownMenuItem(
+                      value: m.id,
+                      child: Text(m.id, overflow: TextOverflow.ellipsis),
+                    ),
+                  )
+                  .toList(),
+              onChanged: busy
+                  ? null
+                  : (id) {
+                      if (id != null) {
+                        setState(() {
+                          model.text = id;
+                          error = null;
+                          connectionResult = null;
+                        });
+                      }
+                    },
+            ),
           TextField(
             controller: model,
+            readOnly: automatic,
             enabled: !busy,
             onChanged: clearResult,
             autocorrect: false,
             textDirection: TextDirection.ltr,
             decoration: InputDecoration(
-              labelText: s.tr(
-                'اسم النموذج أو Deployment',
-                'Model or deployment name',
-              ),
+              labelText: s.tr('النموذج المختار', 'Selected model'),
+              helperText: automatic
+                  ? s.tr(
+                      'يتحدد تلقائيًا عند الحفظ أو الاختبار',
+                      'Selected automatically on save or test',
+                    )
+                  : null,
             ),
           ),
           const SizedBox(height: 16),
@@ -442,16 +562,16 @@ class _ProviderPageState extends ConsumerState<ProviderPage> {
           const SizedBox(height: 14),
           Text(
             s.tr(
-              'اختار نموذجًا متاحًا في حسابك. دعم الصور وPDF حسب النموذج. Azure يحتاج رابط chat/completions كاملًا مع api-version. Ollama يحتاج نموذجًا يعمل ويمكن الوصول إليه من الهاتف.',
-              'Choose a model available to your account. Image/PDF support varies. Azure requires the complete chat/completions URL with api-version. Ollama requires a running model reachable from this phone.',
+              'الاختيار التلقائي يستخدم قائمة المزود، لكن الاستجابة تعتمد على رصيدك وصلاحياتك. Azure يحتاج رابط Deployment كاملًا؛ Ollama يحتاج خادمًا متاحًا ونموذجًا مثبتًا. يمكنك إيقاف الاختيار التلقائي للتحديد يدويًا.',
+              'Automatic selection uses the provider catalog; access and credits still apply. Azure needs a full deployment URL; Ollama needs a reachable server with installed models. Turn off automatic selection to choose manually.',
             ),
             style: const TextStyle(fontSize: 13),
           ),
           const SizedBox(height: 14),
           Text(
             s.tr(
-              'اختبار الاتصال يرسل طلبًا قصيرًا للمزود وقد يستهلك رصيدًا. لا يرسل محادثاتك أو ذاكرتك.',
-              'The connection test sends a small request and may use credits. It does not send your chats or memory.',
+              'الاختبار يرسل طلبًا قصيرًا وقد يستهلك رصيدًا. عند عطل مؤقت نحاول حتى 3 مرات. لا يرسل الاختبار محادثاتك أو ذاكرتك.',
+              'The test sends a small request and may use credits. Temporary failures allow up to 3 attempts. The test sends no chat history or memory.',
             ),
             style: const TextStyle(fontSize: 13),
           ),
@@ -465,8 +585,8 @@ class _ProviderPageState extends ConsumerState<ProviderPage> {
           if (provider == 'OpenRouter')
             Text(
               s.tr(
-                'النموذج الافتراضي openrouter/free يخضع لحدود الاستخدام والتوفر.',
-                'The default openrouter/free model is subject to usage limits and availability.',
+                'نفضّل النماذج المجانية إن كانت متاحة في قائمتك، مع مراعاة حدود الاستخدام والتوفر.',
+                'Free models are preferred when present in your catalog, subject to usage limits and availability.',
               ),
             ),
           const SizedBox(height: 12),
@@ -499,7 +619,8 @@ class _ProviderPageState extends ConsumerState<ProviderPage> {
                       connectionResult = null;
                     });
                     try {
-                      final c = currentConfig();
+                      final c = await resolveSelection();
+                      if (!mounted) return;
                       if (!c.ready) {
                         throw const AiFailure(
                           'أكمل البيانات المطلوبة / Complete required fields',

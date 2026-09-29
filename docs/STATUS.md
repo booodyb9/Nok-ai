@@ -41,3 +41,11 @@ Flutter analyze: no issues. All 17 automated tests passed. Web release build suc
 - Artifact archive SHA-256: `b8432aea57cca29842122334580389ff4c57db8792478872c0f7d9c59e511f68`.
 - APK SHA-256: `d681a1dda5faaf4f0a0157fa56baae683089f48e8e48135968e927349c64fa35`.
 - Downloaded artifact integrity and APK ZIP contents verified. Installation, voice/camera/accessibility on a physical phone, and live API calls are still unverified.
+
+## Automatic model selection — 0.1.1+2
+- Automatic selection is enabled for new and migrated configurations, with a manual override. Provider settings discover models on save/test or explicit refresh, not while typing credentials.
+- Gemini/Claude pagination, OpenAI/Qwen/DeepSeek compatible catalogs, OpenRouter account-filtered catalog and installed Ollama models are supported. Azure extracts a deployment from its complete endpoint URL. Catalog support and account access still vary; manual mode is available.
+- Selection filters chat models and attachment capabilities, caches for ten minutes per provider/endpoint/key, and prefers free OpenRouter candidates when available.
+- Generation retries are bounded to three attempts for temporary server errors. Missing models may fall back; authentication/credits/rate limits do not. Partial responses are never replayed; cancellation stops retries.
+- Local Flutter analysis: no issues. All 43 automated tests passed, including 15 model-discovery/retry tests and two settings UI tests. HTTP calls and platform services in tests are mocked; no live provider key was supplied.
+- Version bumped to 0.1.1+2. Updated Android build pending the workflow for this source commit. Previous build results above refer to 0.1.0, not this update.
