@@ -1,0 +1,14 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  function owner(uid) { return request.auth != null && request.auth.uid == uid; }
+  match /users/{uid} {
+   allow read, delete: if owner(uid);
+   allow create, update: if owner(uid) && request.resource.data.keys().hasOnly(['preferences','updatedAt']) && request.resource.data.preferences is map;
+   match /conversations/{id} {
+    allow read, delete: if owner(uid);
+    allow create, update: if owner(uid) && request.resource.data.keys().hasOnly(['id','title','mode','messages']) && request.resource.data.id == id && request.resource.data.title is string && request.resource.data.messages is list;
+   }
+  }
+ }
+}
