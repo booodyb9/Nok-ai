@@ -12,7 +12,7 @@ An owner must add these two repository Actions secrets:
 - `NOK_KEYSTORE_BASE64`: the single-line base64 encoding of `nok-release.p12`.
 - `NOK_KEYSTORE_PASSWORD`: the password from the private recovery archive.
 
-The workflow validates both secrets together and verifies the certificate against the public fingerprint before building. It removes the restored key afterward. Both repository secrets were configured through GitHub's settings UI on 2026-09-30 with the owner's explicit authorization. The next workflow run will validate the retained certificate and build using persistent signing. Builds made before this setup were intermediate previews that required local signing; do not confuse those artifacts with persistently signed builds.
+The workflow validates both secrets together and verifies the certificate against the public fingerprint before building. It removes the restored key afterward. Both repository secrets were configured through GitHub's settings UI on 2026-09-30 with the owner's explicit authorization. Workflow run 36676611419 validated the retained certificate and successfully built with persistent signing. Its downloaded APK was independently verified with apksigner and zipalign; its certificate matches the previously delivered 0.1.2 APK. Builds made before this setup were intermediate previews that required local signing; do not confuse those artifacts with persistently signed builds.
 
 ## Signing a downloaded build
 

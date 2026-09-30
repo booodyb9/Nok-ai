@@ -68,3 +68,13 @@ Flutter analyze: no issues. All 17 automated tests passed. Web release build suc
 - Final APK SHA-256: `82d51a87409c0b362f01191a5974b7a35a4f6aca2bfef0245d7d905d7e21f1f3`. Package inspection confirms `app.nok.nok_ai`, versionName `0.1.2`, versionCode `3`, minimum SDK 26.
 - GitHub automatic persistent signing still awaits its two repository secrets. The delivered APK is persistently signed; the raw GitHub artifact remains an intermediate debug-signed build.
 - Physical-device installation, native file dialogs and live AI-provider requests remain unverified.
+
+
+## Automatic GitHub signing verified — 2026-09-30
+- Owner explicitly authorized storing the persistent signing keystore and its password in repository Actions secrets. Both secrets were added through the signed-in GitHub settings UI; no secret values are committed or included in artifacts.
+- Workflow run 36676611419 succeeded for commit `f1f6862ce45d7b02998b136a9b069c9b49c07029`: analysis, tests, certificate validation, native release build and artifact upload.
+- Run: https://github.com/booodyb9/Nok-ai/actions/runs/36676611419
+- Artifact 11080770518 archive SHA-256: `09776e1c65cee0f4096242e6b03c7f57b2319bd62720c9d1b58461f67975cdcc`.
+- Downloaded GitHub APK verified directly without local re-signing: cryptographic signature and 16 KB alignment passed. Certificate SHA-256 matches `android/signing-certificate.sha256` and the previously delivered persistent-key 0.1.2 APK.
+- APK: 24,518,621 bytes; SHA-256 `e2238843027020cd6b35d62a0639572476a556aa8bdac5d538150397beaacc40`; package `app.nok.nok_ai`, version `0.1.2+3`.
+- Automatic signing is now configured and verified end to end. Physical-phone installation/update and live provider calls remain unverified.

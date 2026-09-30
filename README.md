@@ -15,7 +15,7 @@ flutter build apk --release --target-platform android-arm64
 flutter build web
 ```
 
-GitHub Actions builds ARM64 APKs on pushes to main. Persistent signing is supported through two repository secrets (`NOK_KEYSTORE_BASE64`, `NOK_KEYSTORE_PASSWORD`). Without them, the artifact is an intermediate debug-signed preview that must be signed with the retained NOK key before distribution. Delivered 0.1.2 APKs are signed locally with that persistent key. See `docs/SIGNING.md`. Earlier temporary preview signatures cannot be recovered; those installations cannot be updated in place with the new key.
+GitHub Actions builds ARM64 APKs on pushes to main. Persistent signing is supported through two repository secrets (`NOK_KEYSTORE_BASE64`, `NOK_KEYSTORE_PASSWORD`). Without them, the artifact is an intermediate debug-signed preview that must be signed with the retained NOK key before distribution. The two repository secrets are now configured. GitHub run 36676611419 produced a persistently signed 0.1.2 APK whose certificate matches the earlier locally signed 0.1.2 delivery. See `docs/SIGNING.md`. Earlier temporary preview signatures cannot be recovered; those installations cannot be updated in place with the new key.
 
 ## Connect AI
 
