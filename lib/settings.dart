@@ -7,6 +7,7 @@ import 'engine.dart';
 import 'services.dart';
 import 'main.dart' show Glass, blue, confirm;
 import 'vision.dart';
+import 'backup_page.dart';
 
 class SettingsPage extends ConsumerWidget {
   final VoidCallback onVoice;
@@ -212,6 +213,20 @@ class SettingsPage extends ConsumerWidget {
                 ),
               ),
               ListTile(
+                leading: const Icon(Icons.save_alt),
+                title: Text(s.tr('نسخة المحادثات في ملف', 'Chat backup file')),
+                subtitle: Text(
+                  s.tr(
+                    'حفظ واستعادة بدون حساب',
+                    'Save and restore without an account',
+                  ),
+                ),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const BackupPage()),
+                ),
+              ),
+              ListTile(
                 leading: const Icon(Icons.cloud_outlined),
                 title: Text(
                   s.tr('الحساب والنسخة السحابية', 'Account & cloud backup'),
@@ -259,8 +274,8 @@ class SettingsPage extends ConsumerWidget {
         heading('حول NOK', 'About NOK'),
         Text(
           s.tr(
-            'الإصدار 0.1.1 · نسخة أولية\nالطلبات والمرفقات تُرسل إلى مزودك المختار. المحادثات محفوظة على الجهاز، والنسخة السحابية اختيارية.',
-            'Version 0.1.1 · Early build\nRequests and attachments go to your chosen provider. Chats are stored on-device; cloud backup is optional.',
+            'الإصدار 0.1.2 · نسخة أولية\nالطلبات والمرفقات تُرسل إلى مزودك المختار. المحادثات محفوظة على الجهاز، والنسخة السحابية اختيارية.',
+            'Version 0.1.2 · Early build\nRequests and attachments go to your chosen provider. Chats are stored on-device; cloud backup is optional.',
           ),
           style: const TextStyle(fontSize: 13),
         ),

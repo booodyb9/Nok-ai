@@ -1,4 +1,4 @@
-name: NOK Android preview
+name: NOK Android build
 on:
   workflow_dispatch:
   push:
@@ -22,10 +22,42 @@ jobs:
       - run: flutter pub get
       - run: flutter analyze
       - run: flutter test
+      - name: Prepare persistent signing when configured
+        env:
+          NOK_KEYSTORE_BASE64: ${{ secrets.NOK_KEYSTORE_BASE64 }}
+          NOK_KEYSTORE_PASSWORD: ${{ secrets.NOK_KEYSTORE_PASSWORD }}
+        run: |
+          python3 - <<'PY'
+          import base64, hashlib, os, subprocess
+          from pathlib import Path
+          encoded = os.environ.get('NOK_KEYSTORE_BASE64', '')
+          password = os.environ.get('NOK_KEYSTORE_PASSWORD', '')
+          if bool(encoded) != bool(password):
+              raise SystemExit('Configure both NOK signing secrets, or neither for an intermediate preview.')
+          if encoded:
+              path = Path(os.environ['RUNNER_TEMP']) / 'nok-release.p12'
+              path.write_bytes(base64.b64decode(encoded, validate=True))
+              path.chmod(0o600)
+              certificate = subprocess.run(['keytool', '-exportcert', '-keystore', str(path),
+                  '-storepass:env', 'NOK_KEYSTORE_PASSWORD', '-alias', 'nok-release'],
+                  check=True, capture_output=True).stdout
+              expected = Path('android/signing-certificate.sha256').read_text().strip()
+              if hashlib.sha256(certificate).hexdigest() != expected:
+                  raise SystemExit('The signing certificate does not match the persistent NOK key.')
+              print('Persistent signing enabled; certificate matches.')
+          else:
+              print('::notice::Intermediate preview only. Configure NOK signing secrets or sign the downloaded APK with the persistent key before distribution.')
+          PY
       - run: flutter build apk --release --target-platform android-arm64
+        env:
+          NOK_SIGNING_KEYSTORE: ${{ runner.temp }}/nok-release.p12
+          NOK_SIGNING_PASSWORD: ${{ secrets.NOK_KEYSTORE_PASSWORD }}
+      - name: Remove temporary signing material
+        if: always()
+        run: rm -f "$RUNNER_TEMP/nok-release.p12"
       - uses: actions/upload-artifact@v4
         with:
-          name: NOK-AI-preview-arm64
+          name: NOK-AI-build-arm64
           path: build/app/outputs/flutter-apk/app-release.apk
           if-no-files-found: error
           retention-days: 14

@@ -49,4 +49,5 @@ app.*.map.json
 config.local.json
 *.jks
 *.keystore
+*.p12
 key.properties

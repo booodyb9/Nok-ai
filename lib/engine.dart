@@ -622,6 +622,29 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<int> restoreChats(List<Conversation> imported) async {
+    if (busy) throw StateError('Wait for the current response to finish');
+    final ids = conversations.map((c) => c.id).toSet();
+    final added = imported.where((c) => ids.add(c.id)).toList();
+    if (conversations.length + added.length > 60) {
+      throw const FormatException(
+        'Restoring would exceed 60 conversations; existing chats were kept',
+      );
+    }
+    if (added.isEmpty) return 0;
+    final merged = [...conversations, ...added];
+    final saved = await local?.setString(
+      'conversations',
+      jsonEncode(merged.map((c) => c.toJson()).toList()),
+    );
+    if (saved != true) {
+      throw StateError('Could not save restored conversations');
+    }
+    conversations.addAll(added);
+    notifyListeners();
+    return added.length;
+  }
+
   Future<void> persist() async {
     await local?.setString(
       'conversations',

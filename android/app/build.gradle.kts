@@ -4,6 +4,13 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+val nokKeystore = System.getenv("NOK_SIGNING_KEYSTORE")?.let { file(it) }
+val nokPassword = System.getenv("NOK_SIGNING_PASSWORD") ?: ""
+val nokHasSigning = nokKeystore?.isFile == true && nokPassword.isNotEmpty()
+check((nokKeystore?.isFile == true) == nokPassword.isNotEmpty()) {
+    "NOK signing configuration is incomplete: supply both the keystore and password."
+}
+
 android {
     namespace = "app.nok.nok_ai"
     compileSdk = flutter.compileSdkVersion
@@ -29,11 +36,23 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        if (nokHasSigning) {
+            create("nokRelease") {
+                storeFile = nokKeystore
+                storePassword = nokPassword
+                keyAlias = "nok-release"
+                keyPassword = nokPassword
+                storeType = "PKCS12"
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            // A temporary preview is an intermediate build only. Distributed
+            // APKs use the persistent key, either here or via apksigner.
+            signingConfig = signingConfigs.getByName(if (nokHasSigning) "nokRelease" else "debug")
         }
     }
 }

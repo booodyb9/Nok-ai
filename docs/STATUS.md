@@ -54,3 +54,11 @@ Flutter analyze: no issues. All 17 automated tests passed. Web release build suc
 - APK: 24,518,537 bytes; SHA-256 `da0a165f9920874f8abf0c0e6ca06fd3cc554519979926c0114b8bed1eed19d8`. Downloaded archive digest and APK contents verified.
 - APK signing-certificate SHA-256: `5ec3d9cae3b3c90eec166652212f5e4378b3a58dea7dc6f68257c4f523a244b2`. This differs from the previous preview signing certificate, so Android will not accept an in-place update over that APK. Preserve needed chats/settings before removing an older installation. Stable production signing remains unconfigured.
 - No physical-device installation or live provider requests were performed for this update.
+
+## Chat backup and persistent signing — 0.1.2+3
+- Added local JSON chat export/import with a restore confirmation, duplicate protection, schema/size validation, and a 60-conversation limit. API keys, memory, settings and attachment bytes are not exported. Existing chats are retained; persistence precedes in-memory mutation.
+- Local Flutter analysis: no issues. All 49 tests passed, including six backup round-trip/validation/restore tests. Native file dialogs and device installation remain unverified.
+- Created and privately retained a persistent Android signing key. Public certificate fingerprint is pinned in the repository; private key/password are excluded.
+- Tested local APK signing using Android Build Tools 36.0.0: cryptographic signature, certificate fingerprint and 16 KB alignment verified. Tested CI signing preparation with both absent secrets and the valid persistent key.
+- GitHub signing configuration is implemented, but adding the two repository secrets requires owner setup because this session's connector lacks that operation. Builds without secrets remain intermediate previews; delivered APKs are signed locally with the persistent key.
+- Remote build and final 0.1.2 APK verification pending this source commit.

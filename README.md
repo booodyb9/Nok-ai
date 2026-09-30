@@ -1,4 +1,4 @@
-# NOK AI — 0.1.1 preview
+# NOK AI — 0.1.2 preview
 
 Arabic/English Flutter Android app, built directly in Work. The robot is integrated into the home background. Android package: `app.nok.nok_ai`, minimum Android 8 (API 26).
 
@@ -15,7 +15,7 @@ flutter build apk --release --target-platform android-arm64
 flutter build web
 ```
 
-The preview APK uses debug signing with release optimizations. CI runners generate temporary debug keys, so separate preview builds can have different signatures and cannot necessarily update an existing installation in place. Preserve important data before removing an older installation. Configure your own release keystore before distributing through an app store. GitHub Actions builds the Android preview APK on pushes to main. Download NOK-AI-preview-arm64 from the successful workflow run artifacts.
+GitHub Actions builds ARM64 APKs on pushes to main. Persistent signing is supported through two repository secrets (`NOK_KEYSTORE_BASE64`, `NOK_KEYSTORE_PASSWORD`). Without them, the artifact is an intermediate debug-signed preview that must be signed with the retained NOK key before distribution. Delivered 0.1.2 APKs are signed locally with that persistent key. See `docs/SIGNING.md`. Earlier temporary preview signatures cannot be recovered; those installations cannot be updated in place with the new key.
 
 ## Connect AI
 
@@ -26,6 +26,10 @@ Discovery supports Gemini and Claude native model catalogs, OpenAI-compatible ca
 Temporary generation failures (500/502/503/504/529) receive at most three attempts with bounded backoff, with an alternative model on the final automatic attempt if available. A missing model can trigger an immediate alternative. Authentication, credit and rate-limit failures do not trigger model switching; partial responses are never replayed. Discovery errors are shown without fabricated fallback names. A successful catalog fetch is distinct from a successful connection test, which requires a text response. Provider outages and account billing issues cannot be resolved by model selection alone.
 
 Photos and text attachments are sent only when a request is submitted. PDF works through compatible OpenAI/Claude/OpenRouter vision models; other PDF routes are explicitly rejected. DOC/DOCX parsing is not implemented. Past attachment bytes are not persisted. Web search opens a real browser; it does not fabricate in-app search results.
+
+## Local chat backup
+
+Settings → Chat backup file exports or restores a NOK JSON file without Firebase or internet. Backups contain chat text and attachment names, excluding provider keys, attachment bytes, preferences and memory. They are unencrypted: store them privately. Restore previews the chat count and asks before merging; existing IDs win and no existing conversation is deleted. Files are validated before persistence, with limits of 10 MB and 60 total conversations. Invalid/oversized backups and imports during a response are rejected. Earlier app versions do not have this export screen; installing this version cannot recover chats lost by uninstalling an older version.
 
 ## Firebase (optional; not connected)
 
